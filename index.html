@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+<title>Hemophilia Treatment Cost Calculator</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --pfizer-blue:#0093D3;
+    --pfizer-dark:#0a2a5b;
+    --pfizer-deep:#00558c;
+    --factor:#0093D3;
+    --nonfactor:#1aa179;
+    --bg:#eef3f8;
+    --card:#ffffff;
+    --text:#1f2d3d;
+    --muted:#6b7c93;
+    --border:#dbe4ee;
+    --shadow:0 2px 12px rgba(10,42,91,.08);
+  }
+  html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;font-size:15px}
+  .wrap{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+  /* Header */
+  .header{background:linear-gradient(135deg,var(--pfizer-dark),var(--pfizer-blue));color:#fff;padding:18px 20px 16px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .brand .logo{font-weight:800;font-size:22px;letter-spacing:.5px;font-style:italic}
+  .brand .tag{font-size:11px;opacity:.85;border:1px solid rgba(255,255,255,.4);border-radius:10px;padding:1px 8px}
+  .header h1{font-size:17px;font-weight:600;line-height:1.35}
+  .header p{font-size:12px;opacity:.8;margin-top:2px}
+
+  /* Progress */
+  .progress{display:flex;align-items:center;justify-content:center;gap:0;background:#fff;padding:14px 20px;border-bottom:1px solid var(--border)}
+  .step-dot{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative}
+  .step-dot .num{width:26px;height:26px;border-radius:50%;background:var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;transition:.25s}
+  .step-dot .lbl{font-size:10.5px;color:var(--muted);text-align:center;transition:.25s}
+  .step-dot.active .num{background:var(--pfizer-blue);color:#fff}
+  .step-dot.active .lbl{color:var(--pfizer-deep);font-weight:600}
+  .step-dot.done .num{background:var(--nonfactor);color:#fff}
+  .step-dot:not(:last-child)::after{content:"";position:absolute;top:13px;left:50%;width:100%;height:2px;background:var(--border);z-index:0}
+  .step-dot.done:not(:last-child)::after{background:var(--nonfactor)}
+  .step-dot .num{position:relative;z-index:1}
+
+  /* Body */
+  .body{flex:1;padding:16px 16px 24px}
+  .screen{display:none;animation:fade .3s ease}
+  .screen.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:18px 16px;margin-bottom:14px}
+  .card h2{font-size:15px;color:var(--pfizer-deep);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .card h2 .ic{width:22px;height:22px;border-radius:6px;background:var(--pfizer-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .field .hint{font-size:11px;color:var(--muted);font-weight:400;margin-bottom:6px}
+  select,input{width:100%;height:44px;border:1.5px solid var(--border);border-radius:10px;padding:0 12px;font-size:14px;color:var(--text);background:#fff;appearance:none;-webkit-appearance:none;transition:.2s}
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%236b7c93' d='M6 8L0 0h12z'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+  select:focus,input:focus{outline:none;border-color:var(--pfizer-blue);box-shadow:0 0 0 3px rgba(0,147,211,.13)}
+
+  /* auto-filled ratio display */
+  .ratio-row{display:flex;gap:12px;margin-top:4px}
+  .ratio-box{flex:1;background:linear-gradient(135deg,#f0f8ff,#e6f4fb);border:1px solid #cfe8f6;border-radius:12px;padding:14px;text-align:center}
+  .ratio-box.nf{background:linear-gradient(135deg,#effaf4,#e3f6ec);border-color:#bfe6d3}
+  .ratio-box .lab{font-size:11px;color:var(--muted);margin-bottom:6px}
+  .ratio-box .val{font-size:24px;font-weight:800;color:var(--factor)}
+  .ratio-box.nf .val{color:var(--nonfactor)}
+  .ratio-box .val .pct{font-size:14px;font-weight:600}
+  .ratio-box.placeholder .val{color:var(--border);font-size:20px}
+
+  /* buttons */
+  .actions{display:flex;gap:12px;margin-top:6px}
+  .btn{flex:1;height:48px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s}
+  .btn-primary{background:linear-gradient(135deg,var(--pfizer-deep),var(--pfizer-blue));color:#fff}
+  .btn-primary:active{transform:scale(.98)}
+  .btn-ghost{background:#fff;color:var(--pfizer-deep);border:1.5px solid var(--border)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* result comparison */
+  .compare{display:flex;gap:12px;margin-bottom:16px}
+  .compare .col{flex:1;border-radius:12px;padding:16px 12px;text-align:center;color:#fff}
+  .col.factor{background:linear-gradient(135deg,#0a6fb0,#0093D3)}
+  .col.nonfactor{background:linear-gradient(135deg,#0e8a64,#1aa179)}
+  .col .lab{font-size:11px;opacity:.9;margin-bottom:6px}
+  .col .amt{font-size:18px;font-weight:800;line-height:1.2}
+  .col .sub{font-size:10.5px;opacity:.85;margin-top:4px}
+
+  .breakdown{width:100%;border-collapse:collapse;font-size:13px}
+  .breakdown th,.breakdown td{padding:11px 8px;text-align:right;border-bottom:1px solid var(--border)}
+  .breakdown th{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+  .breakdown th:first-child,.breakdown td:first-child{text-align:left}
+  .breakdown tr.total td{font-weight:800;color:var(--pfizer-deep);border-top:2px solid var(--pfizer-blue);border-bottom:none;background:#f5faff}
+  .breakdown td .pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:8px;color:#fff;font-weight:600}
+  .pill.f{background:var(--factor)}
+  .pill.n{background:var(--nonfactor)}
+
+  .bar-wrap{margin:10px 0 4px}
+  .bar{height:10px;border-radius:6px;background:var(--border);overflow:hidden;display:flex}
+  .bar .seg{height:100%;transition:width .6s ease}
+  .bar-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+  .bar-legend span b{color:var(--text)}
+
+  .summary-line{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;padding:10px;background:#f7f9fc;border-radius:10px}
+
+  .disclaimer{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.5;padding:14px 16px 4px}
+  .footer{padding:10px 16px 20px;text-align:center}
+  .footer .ver{font-size:10px;color:var(--muted)}
+
+  /* invalid hint */
+  .err{color:#d64545;font-size:11px;margin-top:5px;display:none}
+  .field.invalid input,.field.invalid select{border-color:#d64545}
+  .field.invalid .err{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="brand">
+      <span class="logo">PFIZER</span>
+      <span class="tag">HCP Tool</span>
+    </div>
+    <h1>Hemophilia Treatment Cost &amp; Insurance Coverage Calculator</h1>
+    <p>Estimate hospital-wide factor vs. non-factor costs and reimbursement split</p>
+  </div>
+
+  <div class="progress">
+    <div class="step-dot active" id="dot1"><div class="num">1</div><div class="lbl">Coverage<br>Settings</div></div>
+    <div class="step-dot" id="dot2"><div class="num">2</div><div class="lbl">Patient &amp;<br>Cost Input</div></div>
+    <div class="step-dot" id="dot3"><div class="num">3</div><div class="lbl">Cost<br>Results</div></div>
+  </div>
+
+  <div class="body">
+
+    <!-- SCREEN 1 -->
+    <div class="screen show" id="s1">
+      <div class="card">
+        <h2><span class="ic">1</span>Coverage Settings</h2>
+        <div class="field">
+          <label>Province</label>
+          <select id="province">
+            <option value="">— Select province —</option>
+            <option value="beijing">Beijing</option>
+            <option value="shanghai">Shanghai</option>
+            <option value="shandong">Shandong</option>
+          </select>
+          <div class="err">Please select a province.</div>
+        </div>
+        <div class="field">
+          <label>City</label>
+          <select id="city" disabled>
+            <option value="">— Select city —</option>
+          </select>
+          <div class="err">Please select a city.</div>
+        </div>
+        <div class="field">
+          <label>Hospital Grade</label>
+          <select id="grade">
+            <option value="">— Select grade —</option>
+            <option value="3a">Grade IIIA (Tertiary, Class A)</option>
+            <option value="3b">Grade IIIB (Tertiary, Class B)</option>
+            <option value="2a">Grade IIA (Secondary, Class A)</option>
+            <option value="2b">Grade IIB (Secondary, Class B)</option>
+          </select>
+          <div class="err">Please select a hospital grade.</div>
+        </div>
+        <div class="field">
+          <label>Medical Insurance Type</label>
+          <select id="insure">
+            <option value="">— Select type —</option>
+            <option value="employee">Employee Medical Insurance</option>
+            <option value="resident">Resident Medical Insurance</option>
+          </select>
+          <div class="err">Please select an insurance type.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic" style="background:var(--nonfactor)">i</span>Auto-Configured Reimbursement Rates</h2>
+        <div class="hint" style="margin-bottom:12px">Rates are auto-populated based on the selected city and insurance type.</div>
+        <div class="ratio-row">
+          <div class="ratio-box placeholder" id="rbFactor">
+            <div class="lab">Factor Reimbursement Rate</div>
+            <div class="val" id="vFactor">— —</div>
+          </div>
+          <div class="ratio-box nf placeholder" id="rbNonFactor">
+            <div class="lab">Non-Factor Reimbursement Rate</div>
+            <div class="val" id="vNonFactor">— —</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="go2">Next: Patient Input</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 2 -->
+    <div class="screen" id="s2">
+      <div class="card">
+        <h2><span class="ic">2</span>Patient &amp; Annual Cost Input</h2>
+        <div class="hint" style="margin-bottom:14px">Enter the hospital-wide patient counts and per-patient annual treatment costs.</div>
+
+        <div class="field">
+          <label>Hemophilia A — Number of Patients</label>
+          <input type="number" id="hemA" min="0" step="1" placeholder="e.g. 25">
+          <div class="err">Please enter a valid number (≥ 0).</div>
+        </div>
+        <div class="field">
+          <label>Hemophilia B — Number of Patients</label>
+          <input type="number" id="hemB" min="0" step="1" placeholder="e.g. 12">
+          <div class="err">Please enter a valid number (≥ 0).</div>
+        </div>
+        <div class="field">
+          <label>Annual Factor Treatment Cost (¥ / patient)</label>
+          <input type="number" id="costFactor" min="0" step="1000" placeholder="e.g. 320000">
+          <div class="err">Please enter a valid amount (≥ 0).</div>
+        </div>
+        <div class="field">
+          <label>Annual Non-Factor Treatment Cost (¥ / patient)</label>
+          <input type="number" id="costNonFactor" min="0" step="1000" placeholder="e.g. 180000">
+          <div class="err">Please enter a valid amount (≥ 0).</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" id="back1">Back</button>
+        <button class="btn btn-primary" id="go3">Calculate</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 3 -->
+    <div class="screen" id="s3">
+      <div class="card">
+        <h2><span class="ic">3</span>Factor vs. Non-Factor — Hospital-Wide Total</h2>
+        <div class="compare">
+          <div class="col factor">
+            <div class="lab">TOTAL FACTOR COST</div>
+            <div class="amt" id="rTotalFactor">¥0</div>
+            <div class="sub" id="rSubFactor">0 patients</div>
+          </div>
+          <div class="col nonfactor">
+            <div class="lab">TOTAL NON-FACTOR COST</div>
+            <div class="amt" id="rTotalNonFactor">¥0</div>
+            <div class="sub" id="rSubNonFactor">0 patients</div>
+          </div>
+        </div>
+
+        <div class="bar-wrap">
+          <div class="bar"><div class="seg" id="barF" style="width:50%;background:var(--factor)"></div><div class="seg" id="barN" style="width:50%;background:var(--nonfactor)"></div></div>
+          <div class="bar-legend"><span>Factor <b id="lpF">50%</b></span><span>Non-Factor <b id="lpN">50%</b></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic" style="background:var(--pfizer-dark)">=</span>Cost Breakdown (3 Tiers)</h2>
+        <table class="breakdown">
+          <thead>
+            <tr><th>Category</th><th>Total Cost</th><th>Insurance Pays</th><th>Patient Pays</th></tr>
+          </thead>
+          <tbody id="bdBody"></tbody>
+        </table>
+        <div class="summary-line" id="summary"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" id="back2">Back</button>
+        <button class="btn btn-primary" id="restart">Start Over</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="disclaimer">
+    This tool provides estimated figures based on configured reimbursement rates (70%–80%) for illustrative purposes only. Actual reimbursement varies by local medical insurance policy, hospital grade, drug catalog status, and individual patient circumstances. Not for clinical decision-making.
+  </div>
+  <div class="footer"><div class="ver">Pfizer HCP Digital · Hemophilia Tools · EN v1.0</div></div>
+
+</div>
+
+<script>
+/* ---- Reimbursement config (per city + insurance type, 70%-80% band) ---- */
+var RATIO = {
+  beijing:  { employee:{factor:80,nonFactor:75}, resident:{factor:75,nonFactor:70} },
+  shanghai: { employee:{factor:78,nonFactor:72}, resident:{factor:73,nonFactor:70} },
+  jinan:    { employee:{factor:76,nonFactor:71}, resident:{factor:72,nonFactor:70} }
+};
+var CITY_BY_PROV = {
+  beijing:[{v:"beijing",t:"Beijing"}],
+  shanghai:[{v:"shanghai",t:"Shanghai"}],
+  shandong:[{v:"jinan",t:"Jinan (Shandong)"}]
+};
+
+var state={province:"",city:"",grade:"",insure:"",factorRate:0,nonFactorRate:0};
+
+/* ---- helpers ---- */
+function $(id){return document.getElementById(id)}
+function fmt(n){return "¥"+Math.round(n).toLocaleString("en-US")}
+function setDot(n){
+  for(var i=1;i<=3;i++){
+    var d=$("dot"+i);
+    d.className="step-dot"+(i<n?" done":i===n?" active":"");
+  }
+}
+function show(n){
+  for(var i=1;i<=3;i++){$("s"+i).className="screen"+(i===n?" show":"")}
+  setDot(n);window.scrollTo(0,0);
+}
+
+/* ---- screen 1: city cascade + auto rates ---- */
+$("province").addEventListener("change",function(){
+  var p=this.value;state.province=p;state.city="";
+  var cs=CITY_BY_PROV[p]||[];
+  var c=$("city");
+  c.innerHTML='<option value="">— Select city —</option>'+
+    cs.map(function(o){return '<option value="'+o.v+'">'+o.t+'</option>'}).join("");
+  c.disabled=cs.length===0;
+  updateRates();
+});
+$("city").addEventListener("change",function(){state.city=this.value;updateRates();});
+$("grade").addEventListener("change",function(){state.grade=this.value;});
+$("insure").addEventListener("change",function(){state.insure=this.value;updateRates();});
+
+function updateRates(){
+  var r = (state.city && state.insure) ? RATIO[state.city][state.insure] : null;
+  if(r){
+    state.factorRate=r.factor;state.nonFactorRate=r.nonFactor;
+    $("vFactor").innerHTML=r.factor+'<span class="pct">%</span>';
+    $("vNonFactor").innerHTML=r.nonFactor+'<span class="pct">%</span>';
+    $("rbFactor").className="ratio-box";
+    $("rbNonFactor").className="ratio-box nf";
+  }else{
+    state.factorRate=0;state.nonFactorRate=0;
+    $("vFactor").textContent="— —";$("vNonFactor").textContent="— —";
+    $("rbFactor").className="ratio-box placeholder";
+    $("rbNonFactor").className="ratio-box nf placeholder";
+  }
+}
+
+function validField(selectId){
+  var f=$(selectId).closest(".field");
+  if(!$(selectId).value){f.classList.add("invalid");return false}
+  f.classList.remove("invalid");return true;
+}
+function validNum(id){
+  var el=$(id),f=el.closest(".field"),v=parseFloat(el.value);
+  if(isNaN(v)||v<0){f.classList.add("invalid");return false}
+  f.classList.remove("invalid");return true;
+}
+
+/* ---- navigation ---- */
+$("go2").addEventListener("click",function(){
+  var ok=["province","city","grade","insure"].every(validField);
+  if(!ok)return;
+  if(!state.factorRate){alert("Please complete the coverage settings so reimbursement rates can be auto-populated.");return}
+  show(2);
+});
+$("back1").addEventListener("click",function(){show(1);});
+
+$("go3").addEventListener("click",function(){
+  var ok=["hemA","hemB","costFactor","costNonFactor"].every(validNum);
+  if(!ok)return;
+  compute();show(3);
+});
+$("back2").addEventListener("click",function(){show(2);});
+$("restart").addEventListener("click",function(){
+  ["province","city","grade","insure","hemA","hemB","costFactor","costNonFactor"].forEach(function(id){
+    var el=$(id);if(el)el.value="";
+  });
+  state={province:"",city:"",grade:"",insure:"",factorRate:0,nonFactorRate:0};
+  $("city").disabled=true;updateRates();show(1);
+});
+
+/* ---- compute ---- */
+function compute(){
+  var hemA=parseInt($("hemA").value)||0;
+  var hemB=parseInt($("hemB").value)||0;
+  var cf=parseFloat($("costFactor").value)||0;
+  var cn=parseFloat($("costNonFactor").value)||0;
+  var total=hemA+hemB;
+  var tf=total*cf;          // total factor cost
+  var tn=total*cn;          // total non-factor cost
+  var fIns=tf*state.factorRate/100;
+  var fPat=tf-fIns;
+  var nIns=tn*state.nonFactorRate/100;
+  var nPat=tn-nIns;
+  var gAll=tf+tn, gIns=fIns+nIns, gPat=fPat+nPat;
+
+  $("rTotalFactor").textContent=fmt(tf);
+  $("rTotalNonFactor").textContent=fmt(tn);
+  $("rSubFactor").textContent=total+" patients · "+state.factorRate+"% covered";
+  $("rSubNonFactor").textContent=total+" patients · "+state.nonFactorRate+"% covered";
+
+  var sum=tf+tn||1, pf=tf/sum*100, pn=tn/sum*100;
+  $("barF").style.width=Math.max(pf,2)+"%";
+  $("barN").style.width=Math.max(pn,2)+"%";
+  $("lpF").textContent=pf.toFixed(0)+"%";
+  $("lpN").textContent=pn.toFixed(0)+"%";
+
+  var rows=[
+    {tag:"f",name:"Factor Therapy",tot:tf,ins:fIns,pat:fPat},
+    {tag:"n",name:"Non-Factor Therapy",tot:tn,ins:nIns,pat:nPat}
+  ];
+  var html=rows.map(function(r){
+    return '<tr><td><span class="pill '+(r.tag==="f"?"f":"n")+'">'+r.tag.toUpperCase()+'</span> '+r.name+'</td>'+
+      '<td>'+fmt(r.tot)+'</td><td>'+fmt(r.ins)+'</td><td>'+fmt(r.pat)+'</td></tr>';
+  }).join("")+
+    '<tr class="total"><td>Grand Total</td><td>'+fmt(gAll)+'</td><td>'+fmt(gIns)+'</td><td>'+fmt(gPat)+'</td></tr>';
+  $("bdBody").innerHTML=html;
+
+  $("summary").innerHTML=
+    "Hospital-wide: <b>"+total+"</b> hemophilia patients ("+hemA+" A + "+hemB+" B) · "+
+    "Coverage: "+state.factorRate+"% factor / "+state.nonFactorRate+"% non-factor · "+
+    "Patient out-of-pocket share: <b>"+(gAll?(gPat/gAll*100).toFixed(0):0)+"%</b>";
+}
+</script>
+</body>
+</html>
